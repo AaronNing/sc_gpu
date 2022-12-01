@@ -75,6 +75,6 @@ def tsne(adata, use_rep='X_pca', perplexity=30.0):
 
 @_check_init
 def leiden(adata, resolution=1, use_rep=None, add_key='leiden'):
-    if use_rep is not None:
+    if use_rep is None:
         sc.pp.neighbors(adata, use_rep=use_rep)
     adata.obs[add_key] = rapids_scanpy_funcs.leiden(adata, resolution=resolution)
