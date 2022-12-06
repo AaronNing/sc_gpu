@@ -7,6 +7,8 @@ except ImportError as e:
     print("Please confirm cuml is installed. ")
     raise e
 
+from functools import wraps
+
 
 class Globals:
 
@@ -29,7 +31,7 @@ def init(gpu: int = 0):
 
 
 def _check_init(func):
-
+    @wraps(func)
     def func_with_init_check(*args, **kwargs):
         if not globals.INITIALIZED:
             # raise InitializationError('Please call `scanpy_gpu.init` to initilize first.')
@@ -75,6 +77,6 @@ def tsne(adata, use_rep='X_pca', perplexity=30.0):
 
 @_check_init
 def leiden(adata, resolution=1, use_rep=None, add_key='leiden'):
-    if use_rep is None:
+    if use_rep is not None:
         sc.pp.neighbors(adata, use_rep=use_rep)
     adata.obs[add_key] = rapids_scanpy_funcs.leiden(adata, resolution=resolution)

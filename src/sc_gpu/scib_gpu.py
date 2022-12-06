@@ -7,7 +7,10 @@ except ImportError as e:
     print("Please confirm cuml is installed. ")
     raise e
 
+from functools import wraps
+
 import pandas as pd
+import numpy as np
 # from sklearn.metrics.cluster import silhouette_samples, silhouette_score
 from cuml.metrics.cluster import silhouette_samples, silhouette_score
 
@@ -38,7 +41,7 @@ def silhouette(
         raise KeyError(f'{embed} not in obsm')
     asw = silhouette_score(
         X=adata.obsm[embed],
-        labels=adata.obs[group_key],
+        labels=adata.obs[group_key].values.astype('category').codes,
         metric=metric
     )
     if scale:
@@ -100,7 +103,8 @@ def silhouette_batch(
         print(adata.obsm.keys())
         raise KeyError(f'{embed} not in obsm')
 
-    sil_all = pd.DataFrame(columns=['group', 'silhouette_score'])
+    # sil_all = pd.DataFrame(columns=['group', 'silhouette_score'])
+    sil_all = []
 
     for group in adata.obs[group_key].unique():
         adata_group = adata[adata.obs[group_key] == group]
@@ -111,9 +115,11 @@ def silhouette_batch(
 
         sil_per_group = silhouette_samples(
             adata_group.obsm[embed],
-            adata_group.obs[batch_key],
+            adata_group.obs[batch_key].values.astype('category').codes,
             metric=metric
         )
+        
+        sil_per_group = np.hstack(sil_per_group).flatten().tolist()
 
         # take only absolute value
         sil_per_group = [abs(i) for i in sil_per_group]
@@ -122,12 +128,14 @@ def silhouette_batch(
             # scale s.t. highest number is optimal
             sil_per_group = [1 - i for i in sil_per_group]
 
-        sil_all = sil_all.append(
+        sil_all.append(
             pd.DataFrame({
                 'group': [group] * len(sil_per_group),
                 'silhouette_score': sil_per_group
             })
         )
+        
+    sil_all = pd.concat(sil_all)
 
     sil_all = sil_all.reset_index(drop=True)
     sil_means = sil_all.groupby('group').mean()
