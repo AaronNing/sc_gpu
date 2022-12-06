@@ -1,13 +1,14 @@
-import os
+from functools import wraps
+
 import scanpy as sc
+
 try:
     import cuml
+
     from . import rapids_scanpy_funcs
 except ImportError as e:
     print("Please confirm cuml is installed. ")
     raise e
-
-from functools import wraps
 
 
 class Globals:
@@ -31,6 +32,7 @@ def init(gpu: int = 0):
 
 
 def _check_init(func):
+
     @wraps(func)
     def func_with_init_check(*args, **kwargs):
         if not globals.INITIALIZED:

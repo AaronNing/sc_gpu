@@ -1,27 +1,14 @@
-import scanpy as sc
-import scib
+import numpy as np
+import pandas as pd
+
 try:
-    import cuml
-    from . import rapids_scanpy_funcs
+    from cuml.metrics.cluster import silhouette_samples, silhouette_score
 except ImportError as e:
     print("Please confirm cuml is installed. ")
     raise e
 
-from functools import wraps
 
-import pandas as pd
-import numpy as np
-# from sklearn.metrics.cluster import silhouette_samples, silhouette_score
-from cuml.metrics.cluster import silhouette_samples, silhouette_score
-
-
-def silhouette(
-        adata,
-        group_key,
-        embed,
-        metric='euclidean',
-        scale=True
-):
+def silhouette(adata, group_key, embed, metric='euclidean', scale=True):
     """Average silhouette width (ASW)
 
     Wrapper for sklearn silhouette function values range from [-1, 1] with
@@ -39,26 +26,22 @@ def silhouette(
     if embed not in adata.obsm.keys():
         print(adata.obsm.keys())
         raise KeyError(f'{embed} not in obsm')
-    asw = silhouette_score(
-        X=adata.obsm[embed],
-        labels=adata.obs[group_key].values.astype('category').codes,
-        metric=metric
-    )
+    asw = silhouette_score(X=adata.obsm[embed],
+                           labels=adata.obs[group_key].values.astype('category').codes,
+                           metric=metric)
     if scale:
         asw = (asw + 1) / 2
     return asw
 
 
-def silhouette_batch(
-        adata,
-        batch_key,
-        group_key,
-        embed,
-        metric='euclidean',
-        return_all=False,
-        scale=True,
-        verbose=True
-):
+def silhouette_batch(adata,
+                     batch_key,
+                     group_key,
+                     embed,
+                     metric='euclidean',
+                     return_all=False,
+                     scale=True,
+                     verbose=True):
     """Batch ASW
 
     Modified average silhouette width (ASW) of batch
@@ -116,9 +99,8 @@ def silhouette_batch(
         sil_per_group = silhouette_samples(
             adata_group.obsm[embed],
             adata_group.obs[batch_key].values.astype('category').codes,
-            metric=metric
-        )
-        
+            metric=metric)
+
         sil_per_group = np.hstack(sil_per_group).flatten().tolist()
 
         # take only absolute value
@@ -132,9 +114,8 @@ def silhouette_batch(
             pd.DataFrame({
                 'group': [group] * len(sil_per_group),
                 'silhouette_score': sil_per_group
-            })
-        )
-        
+            }))
+
     sil_all = pd.concat(sil_all)
 
     sil_all = sil_all.reset_index(drop=True)
